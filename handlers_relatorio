@@ -1,10 +1,19 @@
+from telegram import Update
+from telegram.ext import ContextTypes
+from supabase import create_client
+from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+
 async def relatorio(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tarefas = supabase.table("tarefas").select("*").execute().data
     total = len(tarefas)
     status_map = {}
     class_map = {}
     aging_map = {}
-    hoje = datetime.now()
     for t in tarefas:
         s = t["status"]
         c = t["classificacao"]

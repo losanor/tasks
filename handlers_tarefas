@@ -4,9 +4,7 @@ from supabase import create_client
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
-
-load_dotenv()
-supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+from config import supabase
 
 async def listar_tarefas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tarefas = supabase.table("tarefas").select("*").eq("status", "A iniciar").execute().data

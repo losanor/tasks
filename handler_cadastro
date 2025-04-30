@@ -1,0 +1,81 @@
+user_data_temp = {}
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 Bem-vindo ao seu assistente de tarefas!\nUse:\n/nova - nova tarefa\n/listar - listar tarefas\n/relatorio - gerar relatório")
+
+async def nova_tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("📝 Qual é o nome da tarefa?")
+    return NOME
+
+async def receber_nome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_data_temp["nome"] = update.message.text
+    botoes = [[InlineKeyboardButton("Sim", callback_data="urgente_sim"), InlineKeyboardButton("Não", callback_data="urgente_nao")]]
+    await update.message.reply_text("⏰ A tarefa é urgente?", reply_markup=InlineKeyboardMarkup(botoes))
+    return URGENTE
+
+async def receber_urgencia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_data_temp["urgente"] = query.data == "urgente_sim"
+    botoes = [[InlineKeyboardButton("Sim", callback_data="importante_sim"), InlineKeyboardButton("Não", callback_data="importante_nao")]]
+    await query.edit_message_text("⭐ A tarefa é importante?", reply_markup=InlineKeyboardMarkup(botoes))
+    return IMPORTANTE
+
+async def receber_importancia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_data_temp["importante"] = query.data == "importante_sim"
+    nome = user_data_temp["nome"]
+    urgente = user_data_temp["urgente"]
+    importante = user_data_temp["importante"]
+    classificacao = classificar_tarefa(urgente, importante)
+    user_data_temp["classificacao"] = classificacao
+    await query.edit_message_text(f"✅ Confirme os dados:\nTarefa: {nome}\nClassificação: {classificacao}",
+                                  reply_markup=InlineKeyboardMarkup([
+                                      [InlineKeyboardButton("Confirmar", callback_data="confirmar")],
+                                      [InlineKeyboardButton("Cancelar", callback_data="cancelar")]
+                                  ]))
+    return CONFIRMACAO
+
+async def confirmar_tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    nome = user_data_temp["nome"]
+    urgente = user_data_temp["urgente"]
+    importante = user_data_temp["importante"]
+    classificacao = user_data_temp["classificacao"]
+    data_criacao = datetime.now()
+    prazo = calcular_prazo(classificacao, data_criacao)
+
+    result = supabase.table("tarefas").insert({
+        "nome": nome,
+        "urgente": urgente,
+        "importante": importante,
+        "classificacao": classificacao,
+        "data_criacao": data_criacao.isoformat(),
+        "prazo": prazo.isoformat() if prazo else None,
+        "status": "A iniciar"
+    }).execute()
+
+    tarefa_id = result.data[0]["id"]
+
+    if classificacao != "Importante e Não Urgente":
+        context.job_queue.run_once(lembrete_tarefa, when=timedelta(days=1), data={"id": tarefa_id, "nome": nome}, name=f"lembrete1_{tarefa_id}")
+        if prazo:
+            delta = prazo - data_criacao
+            context.job_queue.run_once(lembrete_tarefa, when=delta, data={"id": tarefa_id, "nome": nome}, name=f"lembrete2_{tarefa_id}")
+
+    await query.edit_message_text("🎯 Tarefa cadastrada com sucesso!")
+    user_data_temp.clear()
+    return ConversationHandler.END
+
+async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text("❌ Tarefa cancelada.")
+    user_data_temp.clear()
+    return ConversationHandler.END
+
+async def lembrete_tarefa(context: ContextTypes.DEFAULT_TYPE):
+    tarefa = context.job.data
+    await context.bot.send_message(chat_id=context._chat_id, text=f"🔔 Lembrete: a tarefa \"{tarefa['nome']}\" ainda está pendente!")

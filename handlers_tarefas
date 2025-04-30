@@ -1,0 +1,37 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+from supabase import create_client
+from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+
+async def listar_tarefas(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tarefas = supabase.table("tarefas").select("*").eq("status", "A iniciar").execute().data
+    if not tarefas:
+        await update.message.reply_text("📭 Nenhuma tarefa pendente.")
+        return
+    for t in tarefas:
+        botoes = [[
+            InlineKeyboardButton("✅ Concluir", callback_data=f"concluir_{t['id']}"),
+            InlineKeyboardButton("🔁 Postergar", callback_data=f"postergar_{t['id']}")
+        ]]
+        msg = f"📝 *{t['nome']}*\n📌 {t['classificacao']}"
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(botoes), parse_mode="Markdown")
+
+async def acao_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    if data.startswith("concluir_"):
+        tarefa_id = int(data.split("_")[1])
+        data_fim = datetime.now().isoformat()
+        supabase.table("tarefas").update({"status": "Finalizada", "data_finalizacao": data_fim}).eq("id", tarefa_id).execute()
+        await query.edit_message_text("✅ Tarefa concluída com sucesso!")
+    elif data.startswith("postergar_"):
+        tarefa_id = int(data.split("_")[1])
+        nova_data = datetime.now() + timedelta(days=2)
+        supabase.table("tarefas").update({"prazo": nova_data.isoformat()}).eq("id", tarefa_id).execute()
+        await query.edit_message_text("🔁 Tarefa postergada por 2 dias.")

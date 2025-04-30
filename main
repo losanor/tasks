@@ -1,0 +1,22 @@
+app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+conversacao = ConversationHandler(
+    entry_points=[CommandHandler("nova", nova_tarefa)],
+    states={
+        NOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receber_nome)],
+        URGENTE: [CallbackQueryHandler(receber_urgencia)],
+        IMPORTANTE: [CallbackQueryHandler(receber_importancia)],
+        CONFIRMACAO: [CallbackQueryHandler(confirmar_tarefa, pattern="^confirmar$"),
+                      CallbackQueryHandler(cancelar, pattern="^cancelar$")],
+    },
+    fallbacks=[]
+)
+
+app.add_handler(CommandHandler("start", start))
+app.add_handler(conversacao)
+app.add_handler(CommandHandler("listar", listar_tarefas))
+app.add_handler(CommandHandler("relatorio", relatorio))
+app.add_handler(CallbackQueryHandler(acao_callback, pattern="^(concluir_|postergar_).*$"))
+
+if __name__ == '__main__':
+    app.run_polling()

@@ -1,0 +1,19 @@
+from datetime import datetime, timedelta
+
+def classificar_tarefa(urgente: bool, importante: bool) -> str:
+    if urgente and importante:
+        return "Urgente e Importante"
+    elif urgente:
+        return "Urgente e Não Importante"
+    elif importante:
+        return "Importante e Não Urgente"
+    else:
+        return "Baixa Prioridade"
+
+def calcular_prazo(classificacao: str, data_criacao: datetime) -> datetime:
+    if classificacao == "Urgente e Importante":
+        return data_criacao + timedelta(days=1)
+    elif classificacao == "Urgente e Não Importante":
+        return data_criacao + timedelta(days=3)
+    else:
+        return None

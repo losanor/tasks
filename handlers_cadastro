@@ -5,9 +5,8 @@ from utils import classificar_tarefa, calcular_prazo
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
+from config import supabase
 
-load_dotenv()
-supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 user_data_temp = {}
 
 async def nova_tarefa(update: Update, context: ContextTypes.DEFAULT_TYPE):

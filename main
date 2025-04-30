@@ -1,4 +1,17 @@
+from telegram.ext import ApplicationBuilder, CommandHandler, ConversationHandler, CallbackQueryHandler, MessageHandler, filters
+from handlers_cadastro import nova_tarefa, receber_nome, receber_urgencia, receber_importancia, confirmar_tarefa, cancelar
+from handlers_tarefas import listar_tarefas, acao_callback
+from handlers_relatorios import relatorio
+from dotenv import load_dotenv
+import os
+
+# ===== Setup do Bot =====
+load_dotenv()
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
 app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+NOME, URGENTE, IMPORTANTE, CONFIRMACAO = range(4)
 
 conversacao = ConversationHandler(
     entry_points=[CommandHandler("nova", nova_tarefa)],
@@ -12,7 +25,7 @@ conversacao = ConversationHandler(
     fallbacks=[]
 )
 
-app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("start", nova_tarefa))
 app.add_handler(conversacao)
 app.add_handler(CommandHandler("listar", listar_tarefas))
 app.add_handler(CommandHandler("relatorio", relatorio))

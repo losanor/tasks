@@ -4,10 +4,9 @@ from handlers_tarefas import listar_tarefas, acao_callback
 from handlers_relatorios import relatorio
 from dotenv import load_dotenv
 import os
-
+from config import TELEGRAM_TOKEN
 # ===== Setup do Bot =====
-load_dotenv()
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
 
 app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
